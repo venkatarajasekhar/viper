@@ -62,7 +62,7 @@ namespace Network
 	{
 		RakSleep( m_configuration->Find( ConfigSections::Network, ConfigItems::Network::ServerSleepTime ).As< int >( ) );
 
-		Packet* packet = m_networkInterface->Receive( );
+		Packet* packet = static_cast <Packet*>m_networkInterface->Receive( );
 
 		std::stringstream logMessage;
 
@@ -131,8 +131,9 @@ namespace Network
 
 	void ServerNetworkProvider::OnUserPacketReceived( Packet* packet )
 	{
+		if(packet){
 		BitStream bitStream( packet->data, packet->length, false );
-		NetworkMessage* message = NetworkUtils::DeSerialize( &bitStream );
+		NetworkMessage* message = static_cast <NetworkMessage*>NetworkUtils::DeSerialize( &bitStream );
 
 		Debug( message->messageId.C_String( ), "from", packet->systemAddress.ToString( false ) );
 
@@ -155,7 +156,12 @@ namespace Network
 			//Management::Get( )->GetEventManager( )->QueueEvent( event );
 		}
 	}
-
+	else{
+        cerr << "Invalid Pointer, ";
+        delete packet;
+        throw;
+	}
+	}
 
 	void ServerNetworkProvider::PushMessage( const std::string& componentId, const std::string& message, AnyType::AnyTypeMap parameters )
 	{
