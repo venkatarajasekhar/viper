@@ -19,14 +19,14 @@ using namespace Logging;
 #include "Events/Event.h"
 #include "Events/EventData.hpp"
 using namespace Events;
-
+using namespace std;
 #include "Management/Management.h"
 
 namespace Network
 {
 	ClientNetworkProvider::~ClientNetworkProvider()
 	{
-		if ( m_networkInterface != 0 )
+		if ( m_networkInterface != NULL )
 		{
 			delete m_networkInterface;
 		}
@@ -34,24 +34,53 @@ namespace Network
 
 	void ClientNetworkProvider::Release()
 	{
+		try{
 		m_networkInterface->Shutdown( m_configuration->Find( ConfigSections::Network, ConfigItems::Network::MaxClientReleaseTime ).As< int >( ) );
-	}
+		}catch(...){
+			cerr << "Failed to call the API m_networkInterface->Shutdown";
+			throw;
+		}
+			
+		}
 
 	void ClientNetworkProvider::Initialize( Configuration::IConfiguration* configuration )
 	{
 		m_configuration = configuration;
-
+                try{
 		m_configuration->SetDefault( ConfigSections::Network, ConfigItems::Network::MaxClientConnections, 1 );
+                }catch(...){
+                  cerr << "Failed,Calling the API m_configuration->SetDefault";
+                  throw;
+                }
+                try{
 		m_configuration->SetDefault( ConfigSections::Network, ConfigItems::Network::ClientSleepTime, 0 );
+                }catch(...){
+                  cerr << "Failed,Calling the API m_configuration->SetDefault";
+                  throw;
+                }
+                try{
 		m_configuration->SetDefault( ConfigSections::Network, ConfigItems::Network::MaxClientReleaseTime, 10 );
-
-		m_networkInterface = new RakPeer( );
-
+                }catch(...){
+                  cerr << "Failed,Calling the API m_configuration->SetDefault";
+                  throw;
+                }
+                try{
+		m_networkInterface = new RakPeer();
+                }catch(...){
+                	cerr << "New Failed, to allocate the Memory for m_networkInterface";
+                	delete m_networkInterface;
+                	throw;
+                }
+                try{
 		m_networkInterface->Startup( 
 			m_configuration->Find( ConfigSections::Network, ConfigItems::Network::MaxClientConnections ).As< int >( ), 
 			m_configuration->Find( ConfigSections::Network, ConfigItems::Network::ClientSleepTime ).As< int >( ), 
 			&SocketDescriptor( ), 1 
 			);
+                }catch(...){
+                	cerr << "API Failed, to call the m_networkInterface->Startup";
+                	throw;
+                }
 	}
 
 	void ClientNetworkProvider::Update( const float& deltaMilliseconds )
@@ -60,7 +89,7 @@ namespace Network
 
 		Packet* packet = m_networkInterface->Receive( );
 
-		std::stringstream logMessage;
+		stringstream logMessage;
 
 		if ( packet )
 		{
@@ -134,26 +163,54 @@ namespace Network
 
 	void ClientNetworkProvider::OnUserPacketReceived( Packet* packet )
 	{
+		if(packet){
 		BitStream bitStream( packet->data, packet->length, false );
-		NetworkMessage* message = NetworkUtils::DeSerialize( &bitStream );
-
+		NetworkMessage* message = static_cast <NetworkMessage *>NetworkUtils::DeSerialize( &bitStream );
+                if(message){
 		if ( message->messageId == System::Messages::Game::ChangeLevel.c_str( ) )
 		{
-			std::string levelName = message->parameters[ System::Parameters::Game::LevelName ].As< std::string >( );
+			string levelName = message->parameters[ System::Parameters::Game::LevelName ].As< std::string >( );
+			try{
 			IEventData* eventData = new LevelChangedEventData( levelName );
+			}catch(...){
+				cerr << "Failed,Memory allocation for eventData";
+				delete eventData;
+				throw;
+			}
+			try{
 			IEvent* event = new Event( GAME_LEVEL_CHANGED, eventData );
+			}catch(...){
+				cerr << "Failed, Memory allocation for event";
+				delete event;
+				throw;
+			}
+			try{
 			Management::Get( )->GetEventManager( )->QueueEvent( event );
+			}catch(...){
+				cerr << "Failed, API Call Management::Get( )->GetEventManager( )->QueueEvent( event )";
+			        throw;
+			}
+			
 		}
 
 		if ( message->messageId == System::Messages::Network::ComponentUpdate.c_str( ) )
 		{
+			try{
 			m_networkSystem->MessageComponent( 
 				message->parameters[ System::Parameters::Network::ComponentId ].As< std::string >( ), 
 				message->parameters[ System::Parameters::Network::ComponentMessage ].As< System::Message >( ),
 				message->parameters
 				);
-
-			std::string messageText = message->parameters[ System::Parameters::Network::ComponentMessage ].As< System::Message >( );
+			}catch(...){
+				cerr << "Failed,API Call to m_networkSystem->MessageComponent";
+				throw;
+			}
+		}
+		}else{
+		     cerr << "Invalid Pointer message";	
+		     throw;
+		}
+			string messageText = message->parameters[ System::Parameters::Network::ComponentMessage ].As< System::Message >( );
 			messageText = ( messageText.empty( ) ) ? message->messageId.C_String( ) : messageText;
 			Debug( messageText, "from", packet->systemAddress.ToString( false ) );
 		}
@@ -164,6 +221,10 @@ namespace Network
 		}
 
 		delete message;
+		}
+		cerr << "Invalid Pointer: packet";
+		delete packet;
+		throw;
 	}
 
 	void ClientNetworkProvider::PushMessage( const std::string& message, AnyType::AnyTypeMap parameters )
@@ -206,7 +267,7 @@ namespace Network
 
 	void ClientNetworkProvider::SendNetworkMessage( const NetworkMessage& message, const SystemAddress& destination )
 	{
-		BitStream* bitStream = NetworkUtils::Serialize( message );
+		BitStream* bitStream = static_cast <BitStream*>NetworkUtils::Serialize( message );
 		m_networkInterface->Send( bitStream, MEDIUM_PRIORITY, RELIABLE, 0, m_serverAddress, false );
 		Debug( message.messageId, "to",m_serverAddress.ToString( false ) );
 		delete bitStream;
