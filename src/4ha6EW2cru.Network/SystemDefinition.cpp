@@ -26,5 +26,6 @@ extern "C" ISystem* __stdcall CreateSystem( )
 extern "C" void __stdcall DestroySystem( ISystem* system )
 {
 	delete system;
-	system = 0;
+	system = NULL;
+        throw;	
 }
