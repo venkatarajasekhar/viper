@@ -19,14 +19,25 @@ namespace Network
 
 	BitStream* NetworkUtils::Serialize( const NetworkMessage& message )
 	{
-		BitStream* bitStream = new BitStream( );
+		try{
+		BitStream* bitStream = new BitStream();
+		}catch(...){
+			cerr << "Memory allocation problem";
+			delete bitStream;
+			throw;
+		}
 
 		bitStream->Write( ( MessageID ) ID_USER_PACKET_ENUM );
 		bitStream->Write( message.messageId );
 
 		int parameterCount = 0;
-
-		BitStream* parameterBitStream = new BitStream( );
+                try{
+		BitStream* parameterBitStream = new BitStream();
+                }catch(...){
+			cerr << "Memory allocation problem";
+			delete bitStream;
+			throw;
+		}
 
 		for( AnyType::AnyTypeMap::const_iterator i = message.parameters.begin( ); i != message.parameters.end( ); ++i )
 		{
@@ -72,8 +83,13 @@ namespace Network
 
 	NetworkMessage* NetworkUtils::DeSerialize( BitStream* bitStream )
 	{
+		try{
 		NetworkMessage* message = new NetworkMessage( );
-
+		}catch(...){
+			cerr << "Memory allocation problem";
+			delete message;
+			throw;
+		}
 		bitStream->Read( message->message );
 		bitStream->Read( message->messageId );
 
@@ -142,7 +158,13 @@ namespace Network
 
 	void NetworkUtils::SendNetworkMessage( NetworkMessage& message, const SystemAddress& destination, RakPeerInterface* networkInterface )
 	{
-		BitStream* bitStream = NetworkUtils::Serialize( message );
+		try{
+		BitStream* bitStream = NetworkUtils::Serialize(message);
+		}catch(...){
+			cerr << "Memory allocation Problem";
+			delete bitStream;
+			throw;
+		}
 
 		networkInterface->Send( bitStream, MEDIUM_PRIORITY, RELIABLE, 0, destination, false );
 
