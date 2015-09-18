@@ -8,6 +8,7 @@
 #include <MessageIdentifiers.h>
 
 using namespace RakNet;
+using namespace std;
 
 #include "Logging/Logger.h"
 using namespace Logging;
@@ -38,12 +39,23 @@ namespace Network
 
 	void NetworkSystem::Release( )
 	{
-		m_networkProvider->Release( );
+		try{
+		m_networkProvider->Release();
+		}catch(...){
+			cerr << "API Failed, to call the API m_networkProvider->Release()\n";
+			throw;
+		}
 	}
 
 	ISystemScene* NetworkSystem::CreateScene()
 	{
+		try{
 		m_scene = new NetworkSystemScene( this );
+		}catch(...){
+	        cerr << "Unable to allocate the Requested Memory\n";
+	        delete m_scene;
+	        cerr << abort();
+		}
 		return m_scene;
 	}
 
@@ -53,11 +65,23 @@ namespace Network
 
 		if ( m_attributes[ System::Attributes::Network::IsServer ].As< bool >( ) )
 		{
-			m_networkProvider = new ServerNetworkProvider( this );
+		      try{
+				m_networkProvider = new ServerNetworkProvider( this );
+		       }catch(...){
+	               cerr << "Unable to allocate the Requested Memory for ServerNetworkProvider\n";
+	               delete m_networkProvider;
+	               cerr << abort();
+		}
 		}
 		else
 		{
-			m_networkProvider = new ClientNetworkProvider( this );
+			try{
+ 	 		m_networkProvider = new ClientNetworkProvider( this );
+			}catch(...){
+	               cerr << "Unable to allocate the Requested Memory ClientNetworkProvider\n";
+	               delete m_networkProvider;
+	               cerr << abort();
+		}
 		}
 
 		m_networkProvider->Initialize( configuration );
@@ -65,24 +89,45 @@ namespace Network
 
 	void NetworkSystem::PushMessage( const std::string& componentId, const std::string& message, AnyType::AnyTypeMap parameters )
 	{
+		try{
 		m_networkProvider->PushMessage( componentId, message, parameters );
+		}catch(...){
+			cerr<< "API Faliled,to make a API call to NetworkSystem::PushMessage";
+			throw;
+		}
+		
 	}
 
 	void NetworkSystem::Update( const float& deltaMilliseconds )
 	{
-		m_networkProvider->Update( deltaMilliseconds );
+		try{
+			m_networkProvider->Update( deltaMilliseconds );
+		}catch(...){
+		cerr<< "API Faliled,to make a API call to NetworkSystem::Update";
+		throw;
+		}
 	}
 
 	void NetworkSystem::Message( const std::string& message, AnyType::AnyTypeMap parameters )
 	{
 		if( m_networkProvider )
 		{
+			try{
 			m_networkProvider->Message( message, parameters );
+			}catch(...){
+				cerr<< "API Faliled,to make a API call to NetworkSystem::Message";
+				throw; 
+			}
 		}
 	}
 
 	void NetworkSystem::MessageComponent( const std::string& componentName, const std::string& message, AnyType::AnyTypeMap parameters )
 	{
-		m_scene->MessageComponent( componentName, message, parameters );
+		try{
+			m_scene->MessageComponent( componentName, message, parameters );
+		}catch(...){
+			cerr << "API Faliled,to make a API call to NetworkSystem::MessageComponent";
+			throw;
+		}
 	}
 }
